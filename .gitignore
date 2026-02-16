@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Generated runtime assets
+static/*.png
+static/*.mp3
+
+# Environment and secrets
+.env
+.env.*
+
+# Node
+node_modules/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
