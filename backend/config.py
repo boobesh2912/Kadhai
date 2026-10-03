@@ -56,6 +56,16 @@ def tts_voice():
     return _env("GEMINI_TTS_VOICE", DEFAULT_TTS_VOICE)
 
 
+def demo_mode():
+    """True when no Gemini key is configured, or when DEMO_MODE=true forces it.
+
+    The frontend reads this from /api/health and then shows built-in sample content
+    instead of calling the AI endpoints.
+    """
+    forced = _env("DEMO_MODE").lower() in ("1", "true", "yes", "on")
+    return forced or not gemini_api_key()
+
+
 def gemini_timeout():
     """Seconds to wait for one Gemini call (must stay below the Vercel function limit)."""
     return float(_env("GEMINI_TIMEOUT", "55"))

@@ -6,7 +6,7 @@ The project is ready to deploy as-is: `vercel.json` contains the build, routing 
 
 - A GitHub account with this repository.
 - A free [Vercel](https://vercel.com) account (sign in with GitHub).
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey). *(Optional for a first deploy: without a key the site serves its built-in sample story, see the README.)*
 - Recommended: run `python scripts/check_gemini.py` locally first to confirm the key works with all three models.
 
 ## Steps
@@ -55,4 +55,4 @@ Add `GEMINI_API_KEY` first with `vercel env add GEMINI_API_KEY`.
 
 ## Protecting your quota
 
-The demo login does not protect the API, so anyone with the URL can call `/api/*`. For anything public, cap your key's usage in Google AI Studio and consider adding rate limiting in Vercel.
+The mock login does not protect the API, so anyone with the URL can call `/api/*`. For anything public, cap your key's usage in Google AI Studio and consider adding rate limiting in Vercel.

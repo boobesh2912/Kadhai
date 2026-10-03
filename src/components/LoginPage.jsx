@@ -34,70 +34,81 @@ export default function LoginPage({ onLogin }) {
   };
 
   return (
-    <div className="auth-card card">
-      <h1 className="title auth-title">KADHAI</h1>
-      <p className="auth-subtitle">{signingUp ? 'Create your account' : 'Sign in to start your story'}</p>
-
-      <button type="button" className="google-btn" disabled={busy} onClick={() => finish(googleSession())}>
-        <GoogleLogo />
-        <span>Continue with Google</span>
-      </button>
-
-      <div className="divider">
-        <span>or</span>
+    <div className="auth-page">
+      <div className="auth-hero">
+        <span className="logo">
+          <span className="logo-mark" aria-hidden="true">K</span>
+          Kadhai
+        </span>
+        <h1>Turn an idea into an illustrated, narrated story.</h1>
+        <ul className="hero-points">
+          <li>Pick a title, a type, a length and a tone</li>
+          <li>Read it as a storybook, page by page</li>
+          <li>Listen to it read aloud</li>
+        </ul>
       </div>
 
-      <form onSubmit={submit} className="auth-form">
-        {signingUp && (
+      <div className="auth-card card">
+        <h2>{signingUp ? 'Create your account' : 'Sign in to Kadhai'}</h2>
+        <p className="muted">{signingUp ? 'It takes a few seconds.' : 'Welcome back.'}</p>
+
+        <button type="button" className="google-btn" disabled={busy} onClick={() => finish(googleSession())}>
+          <GoogleLogo />
+          <span>Continue with Google</span>
+        </button>
+
+        <div className="divider">
+          <span>or</span>
+        </div>
+
+        <form onSubmit={submit} className="auth-form">
+          {signingUp && (
+            <label>
+              Full name
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                placeholder="Your name"
+                required
+              />
+            </label>
+          )}
           <label>
-            Full name
+            {signingUp ? 'Email' : 'Email or username'}
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              placeholder="Your name"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="username"
+              placeholder={signingUp ? 'you@example.com' : 'Email or username'}
               required
             />
           </label>
-        )}
-        <label>
-          {signingUp ? 'Email' : 'Email or username'}
-          <input
-            type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            autoComplete="username"
-            placeholder={signingUp ? 'you@example.com' : 'Email or username'}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={signingUp ? 'new-password' : 'current-password'}
-            placeholder="Password"
-            required
-          />
-        </label>
-        <button type="submit" className="btn auth-submit" disabled={busy}>
-          {busy ? 'Signing in…' : signingUp ? 'Create account' : 'Sign in'}
-        </button>
-      </form>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={signingUp ? 'new-password' : 'current-password'}
+              placeholder="Password"
+              required
+            />
+          </label>
+          <button type="submit" className="btn auth-submit" disabled={busy}>
+            {busy ? 'Signing in…' : signingUp ? 'Create account' : 'Sign in'}
+          </button>
+        </form>
 
-      <p className="auth-switch">
-        {signingUp ? 'Already have an account?' : 'New here?'}{' '}
-        <button type="button" className="link-btn" onClick={() => setMode(signingUp ? 'signin' : 'signup')}>
-          {signingUp ? 'Sign in' : 'Create an account'}
-        </button>
-      </p>
-
-      <p className="demo-note" role="note">
-        Demo login: any username and password works. Nothing is verified or sent to a server.
-      </p>
+        <p className="auth-switch">
+          {signingUp ? 'Already have an account?' : 'New here?'}{' '}
+          <button type="button" className="link-btn" onClick={() => setMode(signingUp ? 'signin' : 'signup')}>
+            {signingUp ? 'Sign in' : 'Create an account'}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }

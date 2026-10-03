@@ -56,6 +56,7 @@ def create_app():
             {
                 "status": "ok",
                 "gemini_key_set": bool(config.gemini_api_key()),
+                "demo_mode": config.demo_mode(),
             }
         )
 

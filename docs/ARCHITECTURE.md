@@ -53,7 +53,7 @@ One Vercel project serves two things from one URL:
 | File | Responsibility |
 | --- | --- |
 | `App.jsx` | Top-level state: session, wizard step (1-4, result = 5), loading/error; aborts in-flight requests on reset/unmount |
-| `components/LoginPage.jsx` | Google-style button, email/username form, sign-up tab, demo notice |
+| `components/LoginPage.jsx` | Google-style button, email/username form, sign-up tab |
 | `components/ChoiceStep.jsx` | Accessible radio-button grid used for type, length and tone |
 | `components/StoryResult.jsx` | Shows the story and loads image + audio independently (`useAsset` hook with loading / ready / error / retry, and object-URL cleanup) |
 | `api.js` | `createStory`, `createImage`, `createAudio`; turns error bodies into `ApiRequestError` |
@@ -68,7 +68,7 @@ One Vercel project serves two things from one URL:
 
 ![Sequence diagram](diagrams/03-sequence-generate-story.png)
 
-## 4. Demo login
+## 4. Mock login
 
 ![Mock login flow](diagrams/06-mock-login-flow.png)
 
@@ -90,12 +90,16 @@ Model IDs and call shapes come from Google's `python-genai` README and `google-g
 
 ## 7. Testing strategy
 
-- **Backend (pytest, 41 tests):** a local fake Gemini HTTP server is started per test and the *real* SDK is pointed at it with `GEMINI_BASE_URL`. This checks the exact request the SDK sends (path, `x-goog-api-key` header, body fields), response parsing for text/image/audio, and error mapping for 429/400-invalid-key/403/404/500, without a key or network.
-- **Frontend (Vitest, 18 tests):** the API client (success, error bodies, gateway timeout, network failure, aborts, blob URLs) and the mock-login logic (any input accepted, persistence, corrupt/blocked storage, password never stored).
+- **Backend (pytest, 42 tests):** a local fake Gemini HTTP server is started per test and the *real* SDK is pointed at it with `GEMINI_BASE_URL`. This checks the exact request the SDK sends (path, `x-goog-api-key` header, body fields), response parsing for text/image/audio, and error mapping for 429/400-invalid-key/403/404/500, without a key or network.
+- **Frontend (Vitest, 31 tests):** the API client (success, error bodies, gateway timeout, network failure, aborts, blob URLs, health check), the built-in sample story (length, pages, abort handling, pagination, typing tokenizer) and the mock-login logic (any input accepted, persistence, corrupt/blocked storage, password never stored).
 - **Manual end-to-end:** during development the whole app (Vite + Flask + SDK + fake Gemini) was driven in Chromium through login, all four steps, image/audio success, per-asset failure with Retry, story failure, and a 375 px mobile layout.
 - **Deployment config:** `vercel build` was run locally with the real Vercel CLI; it produced the expected routes (`/api/*` to the Python function, other paths static), Python 3.12, `maxDuration: 60` and a ~82 MB function bundle without `node_modules`/`src`/`tests`.
 
-## 8. Extending
+## 8. Running without an API key
+
+`/api/health` reports `demo_mode: true` when `GEMINI_API_KEY` is missing (or `DEMO_MODE=true`). `useDemoMode.js` reads it once on load; if it says so, or the API cannot be reached, `App.jsx` calls `createDemoStory()` instead of `/api/story`. That returns a pre-written five-page story after a short delay, `StoryResult` draws each page's illustration from `src/demo/Illustrations.jsx` (flat SVG, no external images), `StoryBook` reveals the text word by word (`useTypewriter.js`) and `ReadAloud` uses the browser's speech synthesis. With a key configured, none of this code runs and the real Gemini endpoints are used.
+
+## 9. Extending
 
 - **Different voice or model:** change `GEMINI_TTS_VOICE` / `GEMINI_*_MODEL` in the environment.
 - **Real authentication:** replace `auth.js` and add token checks in `backend/app.py` (for example a `before_request` hook), then rate-limit per user.

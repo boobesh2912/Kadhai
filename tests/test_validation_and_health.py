@@ -4,11 +4,20 @@ from conftest import VALID_BODY
 
 
 def test_health_reports_whether_key_is_set(client, monkeypatch):
-    assert client.get("/api/health").get_json() == {"status": "ok", "gemini_key_set": False}
+    assert client.get("/api/health").get_json() == {"status": "ok", "gemini_key_set": False, "demo_mode": True}
     monkeypatch.setenv("GEMINI_API_KEY", "secret-value")
     body = client.get("/api/health").get_json()
     assert body["gemini_key_set"] is True
+    assert body["demo_mode"] is False
     assert "secret-value" not in str(body)
+
+
+def test_demo_mode_can_be_forced_even_with_a_key(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setenv("DEMO_MODE", "true")
+    assert client.get("/api/health").get_json()["demo_mode"] is True
+    monkeypatch.setenv("DEMO_MODE", "false")
+    assert client.get("/api/health").get_json()["demo_mode"] is False
 
 
 @pytest.mark.parametrize("path", ["/api/story", "/api/image"])

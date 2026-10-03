@@ -2,7 +2,7 @@ flowchart TD
     start(["Open the website"]) --> signed{"Signed in?<br/>(session in browser)"}
     signed -- "No" --> login["Login page"]
     login --> how{"How?"}
-    how -- "Continue with Google" --> ok["Signed in as demo user"]
+    how -- "Continue with Google" --> ok["Signed in (mock login)"]
     how -- "Email or username + password" --> ok
     how -- "Create an account" --> ok
     signed -- "Yes" --> s1

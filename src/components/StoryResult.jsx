@@ -1,13 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createAudio, createImage } from '../api.js';
+import { paginate } from '../demo/demoStory.js';
+import Illustration from '../demo/Illustrations.jsx';
+import { LENGTHS, STORY_TYPES, TONES } from '../constants.js';
+import ReadAloud from './ReadAloud.jsx';
+import StoryBook from './StoryBook.jsx';
+
+const labelOf = (list, value) => list.find((item) => item.value === value)?.label ?? value;
 
 // Loads one binary asset (image or audio) and exposes its status, so a failure in
 // one of them never hides the story text or the other asset.
-function useAsset(loader) {
+function useAsset(loader, enabled) {
   const [state, setState] = useState({ status: 'loading', url: null, error: '' });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
     let objectUrl = null;
     setState({ status: 'loading', url: null, error: '' });
@@ -23,7 +31,7 @@ function useAsset(loader) {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [loader, attempt]);
+  }, [loader, attempt, enabled]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { ...state, retry };
@@ -35,46 +43,77 @@ function Unavailable({ what, message, onRetry }) {
       <span>
         {what} unavailable: {message}
       </span>
-      <button type="button" className="btn btn-small" onClick={onRetry}>
+      <button type="button" className="btn btn-secondary btn-small" onClick={onRetry}>
         Retry
       </button>
     </div>
   );
 }
 
-export default function StoryResult({ story, options, onReset }) {
+function CoverImage({ image, title }) {
+  if (image.status === 'ready') return <img src={image.url} alt={`Illustration for ${title}`} className="illustration" />;
+  return (
+    <div className="art-placeholder">
+      {image.status === 'loading' ? (
+        <>
+          <span className="spinner" aria-hidden="true" />
+          <p>Painting the illustration&hellip;</p>
+        </>
+      ) : (
+        <Unavailable what="Illustration" message={image.error} onRetry={image.retry} />
+      )}
+    </div>
+  );
+}
+
+export default function StoryResult({ story, options, demo, onReset }) {
   const imageLoader = useCallback((signal) => createImage(options, signal), [options]);
   const audioLoader = useCallback((signal) => createAudio(story.text, signal), [story.text]);
-  const image = useAsset(imageLoader);
-  const audio = useAsset(audioLoader);
+  const image = useAsset(imageLoader, !demo);
+  const audio = useAsset(audioLoader, !demo);
 
-  const paragraphs = story.text.split(/\n{1,}/).filter((p) => p.trim());
+  const chips = [labelOf(TONES, options.tone), labelOf(LENGTHS, options.length), labelOf(STORY_TYPES, options.storyType)];
+
+  const pages = useMemo(
+    () =>
+      demo
+        ? story.pages.map((page, i) => ({
+            text: page.text,
+            art: <Illustration scene={page.scene} label={`Illustration for page ${i + 1}`} />,
+          }))
+        : paginate(story.text),
+    [demo, story],
+  );
+
+  const coverArt = demo ? (
+    <Illustration scene="street" label={`Cover illustration for ${story.title}`} />
+  ) : (
+    <CoverImage image={image} title={story.title} />
+  );
 
   return (
     <div>
-      <h2 className="title">&ldquo;{story.title}&rdquo;</h2>
-
-      <div className="story-text">
-        {paragraphs.map((p, i) => (
-          <p key={i}>{p}</p>
-        ))}
+      <div className="result-head">
+        <div>
+          <h1>Your story is ready</h1>
+          <p className="muted">Turn the pages with the buttons or the arrow keys.</p>
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={onReset}>
+          New story
+        </button>
       </div>
 
-      {image.status === 'loading' && <p className="asset-note">Painting the illustration&hellip;</p>}
-      {image.status === 'ready' && <img src={image.url} alt={`Illustration for ${story.title}`} className="story-image" />}
-      {image.status === 'error' && <Unavailable what="Illustration" message={image.error} onRetry={image.retry} />}
+      <StoryBook title={story.title} pages={pages} coverArt={coverArt} chips={chips} animate={demo} onReset={onReset} />
 
-      {audio.status === 'loading' && <p className="asset-note">Recording the narration&hellip;</p>}
-      {audio.status === 'ready' && (
-        <div className="audio-controls">
-          <audio controls src={audio.url} aria-label="Story narration" />
+      <div className="narration card">
+        <div>
+          <strong>Narration</strong>
         </div>
-      )}
-      {audio.status === 'error' && <Unavailable what="Narration" message={audio.error} onRetry={audio.retry} />}
-
-      <button type="button" onClick={onReset} className="btn">
-        New Story
-      </button>
+        {demo && <ReadAloud text={story.text} />}
+        {!demo && audio.status === 'loading' && <span className="muted">Recording the narration&hellip;</span>}
+        {!demo && audio.status === 'ready' && <audio controls src={audio.url} aria-label="Story narration" />}
+        {!demo && audio.status === 'error' && <Unavailable what="Narration" message={audio.error} onRetry={audio.retry} />}
+      </div>
     </div>
   );
 }

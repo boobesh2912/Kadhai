@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiRequestError, createAudio, createImage, createStory } from './api.js';
+import { ApiRequestError, createAudio, createImage, createStory, getHealth } from './api.js';
 
 const options = { title: 'The Moon Garden', storyType: 'space', length: 'short', tone: 'magical' };
 
@@ -66,5 +66,18 @@ describe('binary endpoints', () => {
     mockFetch(new Response(new Blob(['y'], { type: 'audio/wav' })));
     expect(await createAudio('Hello')).toBe('blob:fake');
     expect(createObjectURL).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('getHealth', () => {
+  it('returns the health body', async () => {
+    const fetchMock = mockFetch(Response.json({ status: 'ok', demo_mode: true }));
+    expect(await getHealth()).toEqual({ status: 'ok', demo_mode: true });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/health');
+  });
+
+  it('throws on a non-OK response so the UI can fall back to demo mode', async () => {
+    mockFetch(new Response('bad gateway', { status: 502 }));
+    await expect(getHealth()).rejects.toThrow('HTTP 502');
   });
 });

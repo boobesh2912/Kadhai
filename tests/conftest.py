@@ -24,6 +24,7 @@ def clean_env(monkeypatch):
         "GEMINI_TTS_VOICE",
         "GEMINI_TIMEOUT",
         "GEMINI_BASE_URL",
+        "DEMO_MODE",
     ):
         monkeypatch.delenv(name, raising=False)
 

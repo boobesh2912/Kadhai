@@ -56,3 +56,10 @@ export async function createAudio(text, signal) {
   const response = await post('/api/audio', { text }, signal);
   return URL.createObjectURL(await response.blob());
 }
+
+// Tells the UI whether the server has a Gemini key (live) or should run the built-in demo.
+export async function getHealth(signal) {
+  const response = await fetch('/api/health', { signal });
+  if (!response.ok) throw new Error(`Health check failed (HTTP ${response.status})`);
+  return response.json();
+}

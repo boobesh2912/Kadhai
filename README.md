@@ -8,7 +8,7 @@ KADHAI ("kadhai" means *story*) is a full-stack web app. You pick a title, a sto
 - a matching **illustration** (image),
 - a **narration** (audio you can play).
 
-All three come from **Google Gemini**, using a single API key and one model per task. The app has a **demo login** (Google-style button, email/username form and sign-up; any input is accepted) in front of the generator.
+All three come from **Google Gemini**, using a single API key and one model per task. The app has a **mock login** (Google-style button, email/username form and sign-up; any input is accepted) in front of the generator, a light, flat SaaS-style interface, and a storybook-style reader.
 
 | Layer | Technology |
 | --- | --- |
@@ -26,10 +26,11 @@ All three come from **Google Gemini**, using a single API key and one model per 
 4. [Run locally](#run-locally)
 5. [Deploy to Vercel](#deploy-to-vercel)
 6. [API reference](#api-reference)
-7. [Demo login](#demo-login)
-8. [Testing](#testing)
-9. [Known limitations](#known-limitations)
-10. [Diagrams for reports](#diagrams-for-reports)
+7. [Mock login](#mock-login)
+8. [Running without an API key](#running-without-an-api-key)
+9. [Testing](#testing)
+10. [Known limitations](#known-limitations)
+11. [Diagrams for reports](#diagrams-for-reports)
 
 ## How it works
 
@@ -70,7 +71,7 @@ flowchart TD
     start(["Open the website"]) --> signed{"Signed in?<br/>(session in browser)"}
     signed -- "No" --> login["Login page"]
     login --> how{"How?"}
-    how -- "Continue with Google" --> ok["Signed in as demo user"]
+    how -- "Continue with Google" --> ok["Signed in (mock login)"]
     how -- "Email or username + password" --> ok
     how -- "Create an account" --> ok
     signed -- "Yes" --> s1
@@ -179,8 +180,11 @@ Kadhai/
 │   ├── main.jsx, App.jsx     #   entry and the 4-step wizard
 │   ├── api.js                #   fetch client for /api/*
 │   ├── auth.js               #   mock-login session logic
+│   ├── useDemoMode.js        #   asks /api/health whether a key is configured
+│   ├── useTypewriter.js      #   word-by-word text reveal
 │   ├── constants.js, styles.css
-│   └── components/           #   LoginPage, ChoiceStep, StoryResult
+│   ├── demo/                 #   built-in sample story + vector illustrations
+│   └── components/           #   LoginPage, ChoiceStep, StoryBook, StoryResult, ...
 ├── tests/                    # pytest (backend)
 ├── scripts/check_gemini.py   # tests your key against the 3 models
 ├── docs/                     # ARCHITECTURE.md, DEPLOYMENT.md, diagrams/
@@ -204,6 +208,7 @@ You need **one key**: a Gemini API key.
 | `GEMINI_TTS_MODEL` | No | Default `gemini-3.8-flash-tts` | - |
 | `GEMINI_TTS_VOICE` | No | Default `Kore` | - |
 | `GEMINI_TIMEOUT` | No | Seconds per Gemini call, default `55` | - |
+| `DEMO_MODE` | No | Set to `true` to serve the built-in sample story even when a key is set | - |
 
 **Where to put it**
 
@@ -277,7 +282,7 @@ All endpoints are under `/api`, accept and return JSON (except where noted) and 
 
 | Method and path | Request body | Success response |
 | --- | --- | --- |
-| `GET /api/health` | - | `{"status":"ok","gemini_key_set":true}` (never shows the key) |
+| `GET /api/health` | - | `{"status":"ok","gemini_key_set":true,"demo_mode":false}` (never shows the key) |
 | `POST /api/story` | `{"title","storyType","length","tone"}` | `200 {"title","text"}` |
 | `POST /api/image` | same as `/api/story` | `200` image bytes (`image/png` or the model's type) |
 | `POST /api/audio` | `{"text"}` (1-5000 chars) | `200` audio bytes (`audio/wav`) |
@@ -297,9 +302,9 @@ Errors are always `{"error": "<message>", "code": "<code>"}`:
 | 502 | `provider_unreachable`, `provider_error` | Network or other Gemini failure |
 | 502 | `empty_story`, `empty_image`, `empty_audio` | Gemini answered without the expected output |
 
-## Demo login
+## Mock login
 
-The login screen is a **mock** for demonstration (e.g. in a report or presentation):
+The login screen is a **mock** (useful for presentations):
 
 - *Continue with Google* signs in instantly as "Google User" (no Google account is involved).
 - *Email or username + password* signs in with **any non-empty values**; the name shown is derived from what you type.
@@ -326,11 +331,22 @@ flowchart TD
 
 It is not real security: it only gates the user interface (see [limitations](#known-limitations)).
 
+## Running without an API key
+
+If `GEMINI_API_KEY` is not set (or `DEMO_MODE=true`), the app still works end to end without calling any AI service. `/api/health` then reports `"demo_mode": true`, and the frontend:
+
+- shows a built-in, pre-written funny story ("A man and his car", about 310 words, five pages) whatever options are chosen, under the title you typed;
+- shows hand-drawn vector illustrations for each page (`src/demo/Illustrations.jsx`);
+- reveals each page word by word and offers *Read aloud* through the browser's built-in voice;
+- is also used if the API cannot be reached at all.
+
+As soon as a key is configured (and `DEMO_MODE` is not `true`), the same screens use real Gemini output instead. This content is **pre-written, not generated**, so say so when describing the project.
+
 ## Testing
 
 ```bash
-python -m pytest -q       # 41 backend tests
-npm test                  # 18 frontend tests (Vitest)
+python -m pytest -q       # 42 backend tests
+npm test                  # 31 frontend tests (Vitest)
 npm run build             # production build
 ```
 
@@ -340,8 +356,9 @@ The backend tests run the real `google-genai` SDK against a local fake Gemini se
 
 - **Live Gemini calls are only as verified as your key allows.** The automated tests use a fake server. Use `python scripts/check_gemini.py` to confirm all three models work with your key before presenting.
 - **Free-tier limits are low and can change.** Narration is one request for the whole story; very long stories may be slow or hit limits.
-- **The demo login is not security.** The `/api/*` endpoints themselves are public: anyone who finds the URL can spend your Gemini quota. For a public deployment, add rate limiting (for example Vercel's firewall rules) and keep the key's quota capped.
+- **The mock login is not security.** The `/api/*` endpoints themselves are public: anyone who finds the URL can spend your Gemini quota. For a public deployment, add rate limiting (for example Vercel's firewall rules) and keep the key's quota capped.
 - **60-second function limit.** `vercel.json` sets `maxDuration` to 60 seconds, the safe value for every plan; each Gemini call is cut off at 55 seconds and reported as a timeout.
+- **Without a key the story is pre-written.** See [Running without an API key](#running-without-an-api-key): the text and pictures are built in, not generated.
 - **No story history.** Nothing is saved on a server; stories exist only in the open page.
 
 ## Diagrams for reports
@@ -355,4 +372,4 @@ All flowcharts are in [docs/diagrams](docs/diagrams) as editable Mermaid sources
 | `03-sequence-generate-story` | The request sequence between browser, API and Gemini |
 | `04-backend-request-flow` | Validation, key check, Gemini call, error mapping |
 | `05-deployment-flow` | GitHub push to live Vercel site |
-| `06-mock-login-flow` | The demo login |
+| `06-mock-login-flow` | The mock login |
