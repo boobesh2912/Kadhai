@@ -1,0 +1,23 @@
+flowchart LR
+    user(["User's browser"])
+
+    subgraph vercel["Vercel (one project, one URL)"]
+        direction TB
+        static["Static hosting<br/>React app built by Vite<br/>(index.html, JS, CSS)"]
+        fn["Python serverless function<br/>Flask app<br/>api/index.py serves /api/*"]
+        env[("Environment variable<br/>GEMINI_API_KEY")]
+    end
+
+    subgraph google["Google Gemini API (one key)"]
+        direction TB
+        text["Text model<br/>gemini-flash-latest"]
+        image["Image model<br/>gemini-3.1-flash-lite-image"]
+        tts["Speech model<br/>gemini-3.8-flash-tts"]
+    end
+
+    user -->|"1. GET / (page)"| static
+    user -->|"2. POST /api/story, /api/image, /api/audio"| fn
+    env -.->|"read at runtime"| fn
+    fn -->|"story text"| text
+    fn -->|"illustration"| image
+    fn -->|"narration"| tts

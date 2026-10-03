@@ -1,0 +1,32 @@
+flowchart TD
+    start(["Open the website"]) --> signed{"Signed in?<br/>(session in browser)"}
+    signed -- "No" --> login["Login page"]
+    login --> how{"How?"}
+    how -- "Continue with Google" --> ok["Signed in as demo user"]
+    how -- "Email or username + password" --> ok
+    how -- "Create an account" --> ok
+    signed -- "Yes" --> s1
+    ok --> s1["Step 1: enter story title"]
+    s1 --> s2["Step 2: choose story type"]
+    s2 --> s3["Step 3: choose length"]
+    s3 --> s4["Step 4: choose tone"]
+    s4 --> gen["Click Generate"]
+    gen --> story{"Story created?"}
+    story -- "No" --> err["Show friendly error<br/>Try again"]
+    err --> s4
+    story -- "Yes" --> show["Show story text"]
+    show --> par1["Fetch illustration"]
+    show --> par2["Fetch narration audio"]
+    par1 --> r1{"OK?"}
+    par2 --> r2{"OK?"}
+    r1 -- "Yes" --> img["Show image"]
+    r1 -- "No" --> n1["Show note + Retry button"]
+    r2 -- "Yes" --> aud["Show audio player"]
+    r2 -- "No" --> n2["Show note + Retry button"]
+    img --> done(["Result page"])
+    aud --> done
+    n1 --> done
+    n2 --> done
+    done --> again{"Next action"}
+    again -- "New Story" --> s1
+    again -- "Log out" --> login

@@ -1,0 +1,16 @@
+flowchart LR
+    dev(["Developer"]) -->|"git push"| gh[("GitHub repo<br/>boobesh2912/kadhai")]
+    gh -->|"Vercel Git integration"| build
+
+    subgraph build["Vercel build"]
+        direction TB
+        b1["npm install + npm run build<br/>(Vite creates dist/)"]
+        b2["pip install -r requirements.txt<br/>(Flask, google-genai, python-dotenv)"]
+    end
+
+    build --> out1["Static files<br/>served from the CDN"]
+    build --> out2["Python function<br/>api/index.py"]
+    key[("Vercel Project Settings<br/>Environment Variables<br/>GEMINI_API_KEY")] -.-> out2
+    out1 --> live(["https://your-project.vercel.app"])
+    out2 --> live
+    gh -.->|"GitHub Actions CI:<br/>pytest + vitest + build"| ci(["Checks on every push"])

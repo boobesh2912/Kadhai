@@ -1,0 +1,17 @@
+flowchart TD
+    req(["Request to /api/story, /api/image or /api/audio"]) --> json{"Body is valid JSON object?"}
+    json -- "No" --> e400["400 invalid_request"]
+    json -- "Yes" --> val{"Passes validation?<br/>title 1-100 chars, type/length/tone in allow-list,<br/>audio text 1-5000 chars"}
+    val -- "No" --> e400
+    val -- "Yes" --> key{"GEMINI_API_KEY set?"}
+    key -- "No" --> e503["503 missing_api_key"]
+    key -- "Yes" --> gem["Call Gemini model<br/>(60 s limit, 1 retry)"]
+    gem --> res{"Gemini result"}
+    res -- "HTTP 429" --> e429["503 provider_rate_limited"]
+    res -- "Bad key (400/401/403)" --> eauth["502 provider_auth"]
+    res -- "Model not found" --> e404["502 provider_model"]
+    res -- "Timeout" --> e504["504 timeout"]
+    res -- "Other error" --> e502["502 provider_error"]
+    res -- "Success" --> out{"Has output?"}
+    out -- "No" --> eempty["502 empty_story / empty_image / empty_audio"]
+    out -- "Yes" --> ok["200: JSON story, PNG image or WAV audio"]

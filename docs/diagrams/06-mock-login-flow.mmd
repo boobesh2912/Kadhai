@@ -1,0 +1,15 @@
+flowchart TD
+    open(["Login page"]) --> choice{"Choose a method"}
+    choice -- "Continue with Google" --> g["No input needed<br/>session = Google User"]
+    choice -- "Sign in form" --> f1["Type any username/email<br/>and any password"]
+    choice -- "Create an account" --> f2["Type any name, email, password"]
+    f1 --> check1{"Both fields<br/>not empty?"}
+    f2 --> check2{"All fields<br/>not empty?"}
+    check1 -- "No" --> hint["Browser asks to fill the field"]
+    check2 -- "No" --> hint
+    check1 -- "Yes" --> make
+    check2 -- "Yes" --> make
+    g --> make["Create session object<br/>name, optional email, provider<br/>(password is discarded)"]
+    make --> store[("Save session in<br/>browser localStorage")]
+    store --> app(["Show story generator<br/>with name and Log out"])
+    app -->|"Log out"| clear["Delete session"] --> open

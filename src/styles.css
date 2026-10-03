@@ -1,0 +1,386 @@
+:root {
+  --accent: #00d4ff;
+  --accent-2: #007bff;
+  --text: #e0e0e0;
+  --muted: rgba(255, 255, 255, 0.6);
+  --panel: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364) fixed;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 2rem;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.card {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-weight: 700;
+}
+
+.user-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-indicator {
+  text-align: center;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+
+/* ---- buttons ---- */
+.btn {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+  margin: 1rem auto 0;
+}
+
+.btn:hover:not(:disabled) {
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible,
+.select-option:focus-visible,
+.link-btn:focus-visible,
+.google-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.btn-small {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.nav-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ---- inputs and options ---- */
+.input-field {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 1rem;
+  display: block;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.input-field::placeholder,
+.auth-form input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.select-option {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.select-option:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.select-option.selected {
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  color: #fff;
+}
+
+/* ---- story result ---- */
+.story-text {
+  max-height: 300px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 8px;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.story-text p {
+  margin: 0 0 0.9rem;
+}
+
+.story-text p:last-child {
+  margin-bottom: 0;
+}
+
+.story-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 1rem auto;
+  display: block;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.audio-controls {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.audio-controls audio {
+  width: 100%;
+  max-width: 420px;
+}
+
+.asset-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---- login ---- */
+.auth-card {
+  max-width: 420px;
+  margin: 4vh auto 0;
+  padding: 2rem;
+}
+
+.auth-title {
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+
+.google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #dadce0;
+  background: #fff;
+  color: #3c4043;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.google-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  margin: 1.25rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.auth-form input {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.auth-switch {
+  text-align: center;
+  margin: 1.25rem 0 0;
+}
+
+.demo-note {
+  margin: 1.25rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(255, 193, 7, 0.12);
+  color: #ffd54f;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .grid-cols-2,
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .select-option {
+    padding: 0.6rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1rem;
+  }
+
+  .user-name {
+    display: none;
+  }
+}

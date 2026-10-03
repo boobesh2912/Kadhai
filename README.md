@@ -1,189 +1,358 @@
-﻿# KADHAI - AI Story Generator
+# KADHAI - AI Story Generator
 
-KADHAI is a Flask + React (CDN) web app that generates:
-- A custom story text
-- A matching AI image
-- A narrated audio file
+[![CI](https://github.com/boobesh2912/Kadhai/actions/workflows/ci.yml/badge.svg)](https://github.com/boobesh2912/Kadhai/actions/workflows/ci.yml)
 
-The user enters a title and preferences (type, length, tone), and the backend calls external AI services to produce story assets.
+KADHAI ("kadhai" means *story*) is a full-stack web app. You pick a title, a story type, a length and a tone, and it creates:
 
-## What This Product Is About
+- a **story** (text),
+- a matching **illustration** (image),
+- a **narration** (audio you can play).
 
-This project is a lightweight storytelling generator for kids/creative use-cases.
+All three come from **Google Gemini**, using a single API key and one model per task. The app has a **demo login** (Google-style button, email/username form and sign-up; any input is accepted) in front of the generator.
 
-Core idea:
-1. User selects story settings in the browser.
-2. Backend generates story text using OpenRouter (LLM).
-3. Backend generates an image using Pollinations.
-4. Backend generates narration using gTTS.
-5. UI displays the story and allows audio playback.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19 + Vite (built to static files) |
+| Backend | Python 3.12, Flask (runs as a Vercel serverless function) |
+| AI | Google Gemini API through the official `google-genai` SDK |
+| Hosting | Vercel (static frontend + Python function in one project) |
+| Tests / CI | pytest, Vitest, GitHub Actions |
 
-## How It Is Built
+## Contents
 
-## Tech Stack
-- Backend: Python, Flask, Flask-CORS
-- Frontend: React 18 + ReactDOM + Babel (via CDN, inside `index.html`)
-- HTTP client: `requests`
-- Text-to-Speech: `gTTS`
-- Image generation API: Pollinations
-- Story generation API: OpenRouter
+1. [How it works](#how-it-works)
+2. [Project structure](#project-structure)
+3. [API keys and environment variables](#api-keys-and-environment-variables)
+4. [Run locally](#run-locally)
+5. [Deploy to Vercel](#deploy-to-vercel)
+6. [API reference](#api-reference)
+7. [Demo login](#demo-login)
+8. [Testing](#testing)
+9. [Known limitations](#known-limitations)
+10. [Diagrams for reports](#diagrams-for-reports)
 
-## Architecture
-- Single Flask server (`app.py`) serves:
-  - API endpoint (`/create-story`)
-  - Static generated assets (`/static/<path>`)
-  - Frontend (`/` serving `index.html`)
-- Frontend is a multi-step form implemented in inline React code.
-- Generated files are stored temporarily in `static/`.
+## How it works
 
-## File-by-File Documentation
+### System architecture
 
-`app.py`
-- Main Flask app.
-- Implements story/image/audio generation and API endpoints.
-- Uses `OPENROUTER_API_KEY` from environment.
+```mermaid
+flowchart LR
+    user(["User's browser"])
 
-`index.html`
-- Frontend UI and React logic.
-- Handles form steps and API calls.
-- Uses `window.location.origin` for API base.
+    subgraph vercel["Vercel (one project, one URL)"]
+        direction TB
+        static["Static hosting<br/>React app built by Vite<br/>(index.html, JS, CSS)"]
+        fn["Python serverless function<br/>Flask app<br/>api/index.py serves /api/*"]
+        env[("Environment variable<br/>GEMINI_API_KEY")]
+    end
 
-`static/`
-- Runtime output folder for generated images/audio.
-- Files are created dynamically (e.g., `ai_image_*.png`, `audio_*.mp3`).
+    subgraph google["Google Gemini API (one key)"]
+        direction TB
+        text["Text model<br/>gemini-flash-latest"]
+        image["Image model<br/>gemini-3.1-flash-lite-image"]
+        tts["Speech model<br/>gemini-3.8-flash-tts"]
+    end
 
-`test.html`
-- Separate standalone demo file for a Product Management UI.
-- Not connected to KADHAI backend flow.
-
-`package.json`
-- Contains Tailwind/PostCSS dev dependencies.
-- Currently not used by `index.html` runtime (frontend is CDN-based, not build-based).
-
-`requirements.txt`
-- Python runtime dependencies for backend.
-
-`.gitignore`
-- Prevents committing virtual envs, generated assets, cache, and secrets.
-
-## API Usage and Connectivity
-
-## 1) Story Generation API (OpenRouter)
-- Endpoint: `https://openrouter.ai/api/v1/chat/completions`
-- Auth: Bearer token in `OPENROUTER_API_KEY`
-- Model configured in code: `deepseek/deepseek-r1-0528:free`
-- Input: Prompt built from title/type/length/tone
-- Output used: `choices[0].message.content`
-
-## 2) Image Generation API (Pollinations)
-- Endpoint pattern: `https://image.pollinations.ai/prompt/{prompt}?width=...&height=...&nologo=true`
-- Auth: none
-- Output: image bytes saved in `static/`
-
-## 3) Text-to-Speech (gTTS)
-- Library: `gtts`
-- Uses Google TTS service through the library
-- Output: MP3 saved in `static/`
-
-## Internal API
-
-### `POST /create-story`
-Request JSON:
-```json
-{
-  "title": "The Moon Garden",
-  "storyType": "adventure",
-  "length": "short",
-  "tone": "fun"
-}
+    user -->|"1. GET / (page)"| static
+    user -->|"2. POST /api/story, /api/image, /api/audio"| fn
+    env -.->|"read at runtime"| fn
+    fn -->|"story text"| text
+    fn -->|"illustration"| image
+    fn -->|"narration"| tts
 ```
 
-Success response:
-```json
-{
-  "text": "...generated story...",
-  "image": "static/ai_image_123456.png",
-  "audio": "static/audio_123456.mp3"
-}
+The React app is built once and served as static files. Anything under `/api/*` is routed to one Python function (`api/index.py`) that holds the Flask app. The function reads `GEMINI_API_KEY` from its environment and calls three Gemini models. The key never reaches the browser.
+
+### User flow
+
+```mermaid
+flowchart TD
+    start(["Open the website"]) --> signed{"Signed in?<br/>(session in browser)"}
+    signed -- "No" --> login["Login page"]
+    login --> how{"How?"}
+    how -- "Continue with Google" --> ok["Signed in as demo user"]
+    how -- "Email or username + password" --> ok
+    how -- "Create an account" --> ok
+    signed -- "Yes" --> s1
+    ok --> s1["Step 1: enter story title"]
+    s1 --> s2["Step 2: choose story type"]
+    s2 --> s3["Step 3: choose length"]
+    s3 --> s4["Step 4: choose tone"]
+    s4 --> gen["Click Generate"]
+    gen --> story{"Story created?"}
+    story -- "No" --> err["Show friendly error<br/>Try again"]
+    err --> s4
+    story -- "Yes" --> show["Show story text"]
+    show --> par1["Fetch illustration"]
+    show --> par2["Fetch narration audio"]
+    par1 --> r1{"OK?"}
+    par2 --> r2{"OK?"}
+    r1 -- "Yes" --> img["Show image"]
+    r1 -- "No" --> n1["Show note + Retry button"]
+    r2 -- "Yes" --> aud["Show audio player"]
+    r2 -- "No" --> n2["Show note + Retry button"]
+    img --> done(["Result page"])
+    aud --> done
+    n1 --> done
+    n2 --> done
+    done --> again{"Next action"}
+    again -- "New Story" --> s1
+    again -- "Log out" --> login
 ```
 
-Possible errors:
-- `400`: invalid JSON or missing title
-- `500`: generation failure (missing API key/provider issue)
+### One story, step by step
 
-## Setup and Run
+The story text is requested first and shown immediately. The illustration and narration are then requested **in parallel**, so a failure in one never hides the story or the other asset (each has its own Retry button).
 
-## Prerequisites
-- Python 3.10+
-- Internet access (required for all AI services)
-- OpenRouter API key
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as React app (browser)
+    participant F as Flask API (Vercel function)
+    participant G as Gemini API
 
-## Installation
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+    U->>R: Fill 4 steps, click Generate
+    R->>F: POST /api/story {title, storyType, length, tone}
+    F->>F: Validate input (allow-lists, max length)
+    F->>G: Text model: system prompt + story prompt
+    G-->>F: Story text
+    F-->>R: 200 {title, text}
+    R->>U: Show the story immediately
 
-pip install -r requirements.txt
+    par Illustration
+        R->>F: POST /api/image {title, storyType, tone}
+        F->>G: Image model: illustration prompt
+        G-->>F: Image (base64)
+        F-->>R: PNG bytes
+        R->>U: Show image
+    and Narration
+        R->>F: POST /api/audio {text}
+        F->>G: Speech model: story text + voice
+        G-->>F: Audio (WAV or raw PCM)
+        F-->>R: WAV bytes
+        R->>U: Show audio player
+    end
 ```
 
-## Environment
-Set your key before running:
+### Backend request handling
 
-Windows PowerShell:
-```powershell
-$env:OPENROUTER_API_KEY="your_openrouter_key"
+```mermaid
+flowchart TD
+    req(["Request to /api/story, /api/image or /api/audio"]) --> json{"Body is valid JSON object?"}
+    json -- "No" --> e400["400 invalid_request"]
+    json -- "Yes" --> val{"Passes validation?<br/>title 1-100 chars, type/length/tone in allow-list,<br/>audio text 1-5000 chars"}
+    val -- "No" --> e400
+    val -- "Yes" --> key{"GEMINI_API_KEY set?"}
+    key -- "No" --> e503["503 missing_api_key"]
+    key -- "Yes" --> gem["Call Gemini model<br/>(60 s limit, 1 retry)"]
+    gem --> res{"Gemini result"}
+    res -- "HTTP 429" --> e429["503 provider_rate_limited"]
+    res -- "Bad key (400/401/403)" --> eauth["502 provider_auth"]
+    res -- "Model not found" --> e404["502 provider_model"]
+    res -- "Timeout" --> e504["504 timeout"]
+    res -- "Other error" --> e502["502 provider_error"]
+    res -- "Success" --> out{"Has output?"}
+    out -- "No" --> eempty["502 empty_story / empty_image / empty_audio"]
+    out -- "Yes" --> ok["200: JSON story, PNG image or WAV audio"]
 ```
 
-macOS/Linux:
-```bash
-export OPENROUTER_API_KEY="your_openrouter_key"
-```
+More detail (module responsibilities, design decisions, security notes) is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Run
-```bash
-python app.py
-```
-Open: `http://localhost:5000`
-
-## Is Everything Proper? (Codebase Audit)
-
-## What is good
-- End-to-end flow works with a simple architecture.
-- Clear separation between generation steps (story/image/audio).
-- Basic error handling exists.
-- Frontend is responsive and easy to use.
-
-## Risks and gaps to address
-1. No automated tests are present.
-2. `test.html` is unrelated to the main product and can confuse maintainers.
-3. Generated assets are deleted when `/` is loaded; this can remove files still in use by open sessions.
-4. Open CORS (`CORS(app)`) is permissive; restrict origins for production.
-5. No rate limiting or auth on `/create-story`.
-6. No lockfile/environment pinning for Python beyond `requirements.txt`.
-
-## Suggested Next Improvements
-1. Move frontend code into a dedicated `templates/` + static JS structure (or a real React build).
-2. Add unit/integration tests for API endpoint and service wrappers.
-3. Add request validation schema and rate limiting.
-4. Add structured logging and better failure messages for third-party API outages.
-5. Remove or archive `test.html` if not needed.
-
-## Recommended Repository Structure
+## Project structure
 
 ```text
-KADHAI/
-  app.py
-  index.html
-  static/
-  requirements.txt
-  package.json
-  test.html
-  README.md
-  .gitignore
+Kadhai/
+├── api/
+│   └── index.py              # Vercel entrypoint: exposes the Flask `app`
+├── backend/                  # Python backend
+│   ├── app.py                #   Flask app factory and routes
+│   ├── config.py             #   environment variables and defaults
+│   ├── gemini.py             #   single place that calls Gemini
+│   ├── errors.py             #   ApiError + mapping of Gemini errors
+│   ├── validation.py         #   request validation (allow-lists, lengths)
+│   └── services/
+│       ├── story.py          #   text model
+│       ├── image.py          #   image model
+│       └── audio.py          #   speech model (+ PCM to WAV)
+├── src/                      # React frontend
+│   ├── main.jsx, App.jsx     #   entry and the 4-step wizard
+│   ├── api.js                #   fetch client for /api/*
+│   ├── auth.js               #   mock-login session logic
+│   ├── constants.js, styles.css
+│   └── components/           #   LoginPage, ChoiceStep, StoryResult
+├── tests/                    # pytest (backend)
+├── scripts/check_gemini.py   # tests your key against the 3 models
+├── docs/                     # ARCHITECTURE.md, DEPLOYMENT.md, diagrams/
+├── index.html, vite.config.js, package.json
+├── requirements.txt          # production Python dependencies
+├── requirements-dev.txt      # + pytest
+├── vercel.json               # build, routing and function settings
+├── .env.example              # names of the environment variables
+└── .github/workflows/ci.yml  # tests + build on every push
 ```
 
-## License
-Add a `LICENSE` file before publishing publicly.
+## API keys and environment variables
+
+You need **one key**: a Gemini API key.
+
+| Variable | Required | What it is | Where to get it |
+| --- | --- | --- | --- |
+| `GEMINI_API_KEY` | **Yes** | Powers story text, illustration and narration | Create it free in [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GEMINI_TEXT_MODEL` | No | Default `gemini-flash-latest` | - |
+| `GEMINI_IMAGE_MODEL` | No | Default `gemini-3.1-flash-lite-image` | - |
+| `GEMINI_TTS_MODEL` | No | Default `gemini-3.8-flash-tts` | - |
+| `GEMINI_TTS_VOICE` | No | Default `Kore` | - |
+| `GEMINI_TIMEOUT` | No | Seconds per Gemini call, default `55` | - |
+
+**Where to put it**
+
+- **On Vercel (required for the live site):** Project → *Settings* → *Environment Variables* → add `GEMINI_API_KEY` for *Production* (and *Preview* if you want preview deployments to work), then **redeploy**. Variables are only picked up by new deployments.
+- **On your computer:** copy `.env.example` to `.env` and fill it in (`.env` is git-ignored).
+- **Never** put the key in the React code, in a `VITE_...` variable, or in a commit: anything in the browser bundle is public.
+- Vercel itself needs no API key if you deploy through the GitHub integration.
+
+**Is it free?** Model IDs and the "free tier" claim come from Google's own cookbook and SDK docs: the image model `gemini-3.1-flash-lite-image` is described there as having a free tier. Google's pricing page was not reachable while this project was built, so the free-tier status of the text and speech models is **not confirmed here**, and Google can change it. Free tiers also have low rate limits. Run this once with your key to see what works on *your* account:
+
+```bash
+python scripts/check_gemini.py
+```
+
+If a model reports "rate limit or free-tier quota", set the matching `GEMINI_*_MODEL` variable to another model (see [Google's pricing page](https://ai.google.dev/gemini-api/docs/pricing)).
+
+## Run locally
+
+Prerequisites: Python 3.11+ (3.12 recommended) and Node.js 22.
+
+```bash
+git clone https://github.com/boobesh2912/Kadhai.git
+cd Kadhai
+
+# 1) Backend
+python -m venv .venv
+source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+cp .env.example .env                 # Windows: copy .env.example .env  -> then put your key in .env
+python -m backend.app                # API on http://127.0.0.1:5001
+
+# 2) Frontend (second terminal)
+npm install
+npm run dev                          # open http://localhost:5173
+```
+
+Vite forwards `/api/*` to the Flask server on port 5001 (see `vite.config.js`), which mirrors how Vercel routes requests in production.
+
+## Deploy to Vercel
+
+1. Push the code to GitHub (the production branch is `main` by default).
+2. On [vercel.com/new](https://vercel.com/new) import the repository. Vercel reads `vercel.json`, so no build settings need changing.
+3. Add the `GEMINI_API_KEY` environment variable (see above).
+4. Click **Deploy**. You get a `https://<project>.vercel.app` URL.
+5. Open `https://<project>.vercel.app/api/health`. It should show `"gemini_key_set": true`.
+
+Step-by-step with troubleshooting: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+```mermaid
+flowchart LR
+    dev(["Developer"]) -->|"git push"| gh[("GitHub repo<br/>boobesh2912/kadhai")]
+    gh -->|"Vercel Git integration"| build
+
+    subgraph build["Vercel build"]
+        direction TB
+        b1["npm install + npm run build<br/>(Vite creates dist/)"]
+        b2["pip install -r requirements.txt<br/>(Flask, google-genai, python-dotenv)"]
+    end
+
+    build --> out1["Static files<br/>served from the CDN"]
+    build --> out2["Python function<br/>api/index.py"]
+    key[("Vercel Project Settings<br/>Environment Variables<br/>GEMINI_API_KEY")] -.-> out2
+    out1 --> live(["https://your-project.vercel.app"])
+    out2 --> live
+    gh -.->|"GitHub Actions CI:<br/>pytest + vitest + build"| ci(["Checks on every push"])
+```
+
+## API reference
+
+All endpoints are under `/api`, accept and return JSON (except where noted) and are never cached.
+
+| Method and path | Request body | Success response |
+| --- | --- | --- |
+| `GET /api/health` | - | `{"status":"ok","gemini_key_set":true}` (never shows the key) |
+| `POST /api/story` | `{"title","storyType","length","tone"}` | `200 {"title","text"}` |
+| `POST /api/image` | same as `/api/story` | `200` image bytes (`image/png` or the model's type) |
+| `POST /api/audio` | `{"text"}` (1-5000 chars) | `200` audio bytes (`audio/wav`) |
+
+Allowed values: `storyType` = `adventure`, `animal`, `friendship`, `fairy-tale`, `space`, `ocean`; `length` = `short`, `medium`, `long`; `tone` = `fun`, `exciting`, `gentle`, `funny`, `magical`; `title` = 1-100 characters.
+
+Errors are always `{"error": "<message>", "code": "<code>"}`:
+
+| HTTP | `code` | Meaning |
+| --- | --- | --- |
+| 400 / 413 | `invalid_request` | Bad JSON, missing or invalid field, body too large |
+| 503 | `missing_api_key` | `GEMINI_API_KEY` is not set on the server |
+| 503 | `provider_rate_limited` | Gemini rate limit or free-tier quota reached |
+| 502 | `provider_auth` | Gemini rejected the key |
+| 502 | `provider_model` | The configured model was not found |
+| 504 | `timeout` | Gemini did not answer in time |
+| 502 | `provider_unreachable`, `provider_error` | Network or other Gemini failure |
+| 502 | `empty_story`, `empty_image`, `empty_audio` | Gemini answered without the expected output |
+
+## Demo login
+
+The login screen is a **mock** for demonstration (e.g. in a report or presentation):
+
+- *Continue with Google* signs in instantly as "Google User" (no Google account is involved).
+- *Email or username + password* signs in with **any non-empty values**; the name shown is derived from what you type.
+- *Create an account* accepts any name, email and password.
+- Only the display name is kept in the browser's `localStorage` so a refresh keeps you signed in. **Passwords are never stored or sent anywhere.** *Log out* deletes the session.
+
+```mermaid
+flowchart TD
+    open(["Login page"]) --> choice{"Choose a method"}
+    choice -- "Continue with Google" --> g["No input needed<br/>session = Google User"]
+    choice -- "Sign in form" --> f1["Type any username/email<br/>and any password"]
+    choice -- "Create an account" --> f2["Type any name, email, password"]
+    f1 --> check1{"Both fields<br/>not empty?"}
+    f2 --> check2{"All fields<br/>not empty?"}
+    check1 -- "No" --> hint["Browser asks to fill the field"]
+    check2 -- "No" --> hint
+    check1 -- "Yes" --> make
+    check2 -- "Yes" --> make
+    g --> make["Create session object<br/>name, optional email, provider<br/>(password is discarded)"]
+    make --> store[("Save session in<br/>browser localStorage")]
+    store --> app(["Show story generator<br/>with name and Log out"])
+    app -->|"Log out"| clear["Delete session"] --> open
+```
+
+It is not real security: it only gates the user interface (see [limitations](#known-limitations)).
+
+## Testing
+
+```bash
+python -m pytest -q       # 41 backend tests
+npm test                  # 18 frontend tests (Vitest)
+npm run build             # production build
+```
+
+The backend tests run the real `google-genai` SDK against a local fake Gemini server, so request shapes, response parsing and error mapping are exercised without an API key or network. The same checks run on every push in GitHub Actions (`.github/workflows/ci.yml`).
+
+## Known limitations
+
+- **Live Gemini calls are only as verified as your key allows.** The automated tests use a fake server. Use `python scripts/check_gemini.py` to confirm all three models work with your key before presenting.
+- **Free-tier limits are low and can change.** Narration is one request for the whole story; very long stories may be slow or hit limits.
+- **The demo login is not security.** The `/api/*` endpoints themselves are public: anyone who finds the URL can spend your Gemini quota. For a public deployment, add rate limiting (for example Vercel's firewall rules) and keep the key's quota capped.
+- **60-second function limit.** `vercel.json` sets `maxDuration` to 60 seconds, the safe value for every plan; each Gemini call is cut off at 55 seconds and reported as a timeout.
+- **No story history.** Nothing is saved on a server; stories exist only in the open page.
+
+## Diagrams for reports
+
+All flowcharts are in [docs/diagrams](docs/diagrams) as editable Mermaid sources (`.mmd`) plus ready-to-insert **PNG** and **SVG** exports:
+
+| File | Shows |
+| --- | --- |
+| `01-system-architecture` | Browser, Vercel (static + Python function), Gemini models |
+| `02-user-flow` | Everything a user can do, including error paths |
+| `03-sequence-generate-story` | The request sequence between browser, API and Gemini |
+| `04-backend-request-flow` | Validation, key check, Gemini call, error mapping |
+| `05-deployment-flow` | GitHub push to live Vercel site |
+| `06-mock-login-flow` | The demo login |

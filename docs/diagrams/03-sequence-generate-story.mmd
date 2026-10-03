@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as React app (browser)
+    participant F as Flask API (Vercel function)
+    participant G as Gemini API
+
+    U->>R: Fill 4 steps, click Generate
+    R->>F: POST /api/story {title, storyType, length, tone}
+    F->>F: Validate input (allow-lists, max length)
+    F->>G: Text model: system prompt + story prompt
+    G-->>F: Story text
+    F-->>R: 200 {title, text}
+    R->>U: Show the story immediately
+
+    par Illustration
+        R->>F: POST /api/image {title, storyType, tone}
+        F->>G: Image model: illustration prompt
+        G-->>F: Image (base64)
+        F-->>R: PNG bytes
+        R->>U: Show image
+    and Narration
+        R->>F: POST /api/audio {text}
+        F->>G: Speech model: story text + voice
+        G-->>F: Audio (WAV or raw PCM)
+        F-->>R: WAV bytes
+        R->>U: Show audio player
+    end
